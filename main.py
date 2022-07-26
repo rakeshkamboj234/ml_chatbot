@@ -67,19 +67,21 @@ def home():
 @app.route("/get")
 def get_bot_response():
     message = request.args.get('msg')
-    print(message)
-    if message == "bye" or message == "Goodbye":
+    message = message.lower() if message else None
+    
+    if message is None:
+        res = "please provide input."
+    elif message == "bye" or message == "Goodbye":
         ints = predict_class(message)
         res = get_response(ints, intents)
 
     else:
         ints = predict_class(message)
         res = get_response(ints, intents)
-
         
     return str(res)
  
  
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
     
