@@ -7,7 +7,6 @@ from flask import Flask, render_template, request
  
 app = Flask(__name__)
 
-
 import nltk
 from nltk.stem import WordNetLemmatizer
 nltk.download('omw-1.4')
@@ -18,42 +17,42 @@ lemmatizer = WordNetLemmatizer()
 
 intents = json.loads(open('intents.json').read())
 
-words = pickle.load(open('words.pkl', 'rb'))
-classes = pickle.load(open('classes.pkl', 'rb'))
+clean_words = pickle.load(open('words.pkl', 'rb'))
+intent_tags = pickle.load(open('classes.pkl', 'rb'))
 model = load_model('chatbotmodel.h5')
 
-def clean_up_sentence(sentence):
-    sentence_words = nltk.word_tokenize(sentence)
-    sentence_words = [lemmatizer.lemmatize(word)  for word in sentence_words]
-    return sentence_words
+def clean_sentence(sentence):
+    s_words = nltk.word_tokenize(sentence)
+    s_words = [lemmatizer.lemmatize(word)  for word in s_words]
+    return s_words
 
-def bag_of_words(sentence):
-    sentence_words= clean_up_sentence(sentence)
-    bag = [0] * len(words)
-    for w in sentence_words:
-        for i, word in enumerate(words):
+def word_collection(sentence):
+    s_words= clean_sentence(sentence)
+    collection = [0] * len(clean_words)
+    for w in s_words:
+        for i, word in enumerate(clean_words):
             if word == w:
-                bag[i] = 1
+                collection[i] = 1
 
-    return np.array(bag)
+    return np.array(collection)
 
 def predict_class(sentence):
-    bow = bag_of_words(sentence)
-    res = model.predict(np.array([bow]))[0]
+    no_of_words = word_collection(sentence)
+    res = model.predict(np.array([no_of_words]))[0]
     ERROR_THRESHOLD = 0.25
     results = [[i,r] for i, r in enumerate(res) if r > ERROR_THRESHOLD]
 
     results.sort(key=lambda  x:x[1], reverse=True)
     return_list = []
     for r in results:
-        return_list.append({'intent': classes[r[0]], 'probability': str(r[1])})
+        return_list.append({'intent': intent_tags[r[0]], 'probability': str(r[1])})
     return return_list
 
 
-def get_response(intents_list,intents_json):
-    tag= intents_list[0]['intent']
-    list_of_intents =intents_json['intents']
-    for i in list_of_intents:
+def fetch_response(intents_list,json_data):
+    tag = intents_list[0]['intent']
+    intents_list =json_data['intents']
+    for i in intents_list:
         if i['tag'] == tag:
             result = random.choice(i['responses'])
             break
@@ -71,13 +70,9 @@ def get_bot_response():
     
     if message is None:
         res = "please provide input."
-    elif message == "bye" or message == "Goodbye":
-        ints = predict_class(message)
-        res = get_response(ints, intents)
-
     else:
         ints = predict_class(message)
-        res = get_response(ints, intents)
+        res = fetch_response(ints, intents)
         
     return str(res)
  
